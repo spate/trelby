@@ -86,8 +86,14 @@ class GlobalData:
 
         v = self.cvars = mypickle.Vars()
 
-        v.addInt("posX", 0, "PositionX", -20, 9999)
-        v.addInt("posY", 0, "PositionY", -20, 9999)
+        defaultPosX = 0
+        defaultPosY = 0
+        if misc.isMac:
+            # avoid hiding window bar behind menu bar on first run
+            defaultPosX = 50
+            defaultPosY = 20
+        v.addInt("posX", defaultPosX, "PositionX", -20, 9999)
+        v.addInt("posY", defaultPosY, "PositionY", -20, 9999)
 
         # linux has bigger font by default so it needs a wider window
         defaultW = 750
@@ -2591,14 +2597,25 @@ class MyFrame(wx.Frame):
 
 class MyApp(wx.App):
 
+    def MessageBox(self, message, caption, style):
+        # On a Mac, the first call to wx.MessageBox may return immediately with
+        # wx.CANCEL. Since we're displaying a message we want the user to see,
+        # check for wx.CANCEL and redisplay the MessageBox if necessary.
+        result = wx.MessageBox(message, caption, style)
+        if result == wx.CANCEL:
+            return wx.MessageBox(message, caption, style)
+        return result
+
     def OnInit(self):
         global cfgGl, mainFrame, gd
 
-        if (wx.MAJOR_VERSION != 2) or (wx.MINOR_VERSION != 8):
-            wx.MessageBox("You seem to have an invalid version\n"
-                          "(%s) of wxWidgets installed. This\n"
-                          "program needs version 2.8." %
-                          wx.VERSION_STRING, "Error", wx.OK)
+
+        if (wx.MAJOR_VERSION < 2) or \
+           ((wx.MAJOR_VERSION == 2) and (wx.MINOR_VERSION < 8)):
+            self.MessageBox("You seem to have an invalid version\n"
+                            "(%s) of wxWidgets installed. This\n"
+                            "program needs > version 2.8." %
+                            wx.VERSION_STRING, "Error", wx.OK)
             sys.exit()
 
         misc.init()
@@ -2609,15 +2626,15 @@ class MyApp(wx.App):
         if misc.isWindows:
             major = sys.getwindowsversion()[0]
             if major < 5:
-                wx.MessageBox("You seem to have a version of Windows\n"
-                              "older than Windows 2000, which is the minimum\n"
-                              "requirement for this program.", "Error", wx.OK)
+                self.MessageBox("You seem to have a version of Windows\n"
+                                "older than Windows 2000, which is the minimum\n"
+                                "requirement for this program.", "Error", wx.OK)
                 sys.exit()
 
         if not "unicode" in wx.PlatformInfo:
-            wx.MessageBox("You seem to be using a non-Unicode build of\n"
-                          "wxWidgets. This is not supported.",
-                          "Error", wx.OK)
+            self.MessageBox("You seem to be using a non-Unicode build of\n"
+                            "wxWidgets. This is not supported.",
+                            "Error", wx.OK)
             sys.exit()
 
         # by setting this, we don't have to convert from 8-bit strings to

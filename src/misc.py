@@ -19,16 +19,19 @@ TAB_BAR_HEIGHT = 24
 version = "2.3-dev"
 
 def init(doWX = True):
-    global isWindows, isUnix, unicodeFS, doDblBuf, progPath, confPath, tmpPrefix
+    global isWindows, isMac, isUnix, unicodeFS, doDblBuf, progPath, confPath, tmpPrefix
 
     # prefix used for temp files
     tmpPrefix = "trelby-tmp-"
 
     isWindows = False
     isUnix = False
+    isMac = False
 
-    if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+    if sys.platform.startswith("linux"):
         isUnix = True
+    elif sys.platform.startswith("darwin"):
+        isMac = True
     else:
         isWindows = True
 
@@ -38,7 +41,7 @@ def init(doWX = True):
     unicodeFS = isWindows
 
     # wxGTK2 does not need us to do double buffering ourselves, others do
-    doDblBuf = not isUnix
+    doDblBuf = not isUnix and not isMac
 
     # stupid hack to keep testcases working, since they don't initialize
     # opts (the doWX name is just for similarity with util)
@@ -46,7 +49,7 @@ def init(doWX = True):
         progPath = u"."
         confPath = u".trelby"
     else:
-        if isUnix:
+        if isUnix or isMac:
             progPath = unicode(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 "UTF-8")
@@ -104,7 +107,14 @@ def getBitmap(filename):
 # "resources/blaa.png" might return "/opt/trelby/resources/blaa.png" for
 # example.
 def getFullPath(relative):
-    return progPath + "/" + relative
+    if isMac:
+        # For our use case, pkg_resources doesn't work. Since the default path
+        # for a py2app application is going to be inside the libs directory, we
+        # need to work our way back up to the Trelby.app/Contents/Resources
+        # dir:
+        return "../../" + relative
+    else:
+        return progPath + "/" + relative
 
 # TODO: move all GUI stuff to gutil
 

@@ -158,14 +158,65 @@ if sys.platform == "win32":
         windows = [{
                 "script" : "bin/trelby",
                 "icon_resources": [(1, "icon32.ico")],
-           }]
+           }],
+        packages = ["src"],
         )
+elif sys.platform == "darwin":
+    # In order to create a stand-alone app package for Mac, we need to bundle
+    # up all of the dependencies into a single .app directory. We use py2app to
+    # handle this for us.
+    # Note that it's also possible to generate an app package that uses symlinks
+    # to the system python, instead of bundling it all together. Having external
+    # dependencies on wx, etc. makes this complicated, though, so we'll do a
+    # full .app instead. (We really don't want to make the user install wx
+    # themselves.)
+    from setuptools import setup
+    modules = []
+    for f in os.listdir('src'):
+        module_name = os.path.splitext(os.path.basename(f))[0]
+        if module_name == '__init__':
+            continue
+        modules.append(module_name)
+    options = {
+        'py2app': {
+            'argv_emulation': True,
+            'site_packages': True,
+            'arch': 'i386',
+            'iconfile': 'Trelby.icns', #if you want to add some ico
+            'plist': {
+                'CFBundleName': 'Trelby',
+                'CFBundleShortVersionString':'2.3.0', # must be in X.X.X format
+                'CFBundleVersion': '2.3.0',
+                'CFBundleIdentifier':'org.trelby.trelby', #optional
+                #'NSHumanReadableCopyright': '@ Me 2013', #optional
+                'CFBundleDevelopmentRegion': 'English', #optional - English is default
+            },
+            'includes': ['wx'],
+            #'resources': dataFiles,
+        },
+    }
+    platformOptions = {
+        'setup_requires': ['py2app'],
+        'app': ['bin/run_trelby.py'],
+        # trelby isn't a real python package, so we need to include the
+        # individual modules separately in order to make py2app happy.
+        'py_modules': modules,
+        'package_dir': {'':'src'},
+    }
+    for path, files in packageData.iteritems():
+        for file in files:
+            dataFile = os.path.normpath(os.path.join(path, file))
+            dataFiles.append((os.path.dirname(dataFile),glob.glob(dataFile)))
+    packageData = {}
+    print dataFiles
 else:
     dataFiles = [
         ("applications", ["trelby.desktop"]),
         ("man/man1", ["trelby.1.gz"]),
         ]
-    platformOptions = {}
+    platformOptions = {
+        packages: ["src"],
+    }
 
 setup(
     name = "Trelby",
@@ -209,7 +260,6 @@ Features:
       author_email = "osku.salerma@gmail.com",
       url = "http://www.trelby.org/",
       license = "GPL",
-      packages = ["src"],
       package_data = packageData,
       data_files = dataFiles,
       scripts = ["bin/trelby"],

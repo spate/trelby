@@ -1182,6 +1182,12 @@ class ConfigGlobal:
             fn[2] = "Monospace Italic 12"
             fn[3] = "Monospace Bold Italic 12"
 
+        elif misc.isMac:
+            fn[0] = "0;12;70;90;90;0;Courier New;1"
+            fn[1] = "0;12;70;90;92;0;Courier New;1"
+            fn[2] = "0;12;70;93;90;0;Courier New;1"
+            fn[3] = "0;12;70;93;92;0;Courier New;1"
+
         elif misc.isWindows:
                 fn[0] = "0;-13;0;0;0;400;0;0;0;0;3;2;1;49;Courier New"
                 fn[1] = "0;-13;0;0;0;700;0;0;0;0;3;2;1;49;Courier New"
@@ -1214,6 +1220,10 @@ class ConfigGlobal:
                 (u"gpdf", ""),
                 (u"kpdf", ""),
                 (u"okular", ""),
+                ]
+        elif misc.isMac:
+            progs = [
+                (u"/usr/bin/open", "")
                 ]
         elif misc.isWindows:
             # get value via registry if possible, or fallback to old method.
@@ -1357,16 +1367,20 @@ class ConfigGui:
                 nfi.FromString(s)
                 nfi.SetEncoding(wx.FONTENCODING_ISO8859_1)
 
-                fi.font = wx.FontFromNativeInfo(nfi)
+                # On Mac, a pointsize of 0 for nfi will result in a crash
+                if nfi.GetPointSize() > 0:
+                    fi.font = wx.FontFromNativeInfo(nfi)
 
-                # likewise, evil users can set the font name to "z" or
-                # something equally silly, resulting in an
-                # invalid/non-existent font. on wxGTK2 and wxMSW we can
-                # detect this by checking the point size of the font.
-                # wxGTK1 chooses some weird chinese font and I can't find
-                # a way to detect that, but it's irrelevant since we'll
-                # rip out support for it in a few months.
-                if fi.font.GetPointSize() == 0:
+                    # likewise, evil users can set the font name to "z" or
+                    # something equally silly, resulting in an
+                    # invalid/non-existent font. on wxGTK2 and wxMSW we can
+                    # detect this by checking the point size of the font.
+                    # wxGTK1 chooses some weird chinese font and I can't find
+                    # a way to detect that, but it's irrelevant since we'll
+                    # rip out support for it in a few months.
+                    if fi.font.GetPointSize() == 0:
+                        fi.font = None
+                else:
                     fi.font = None
 
             # if either of the above failures happened, create a dummy
@@ -1377,7 +1391,12 @@ class ConfigGui:
                                   encoding = wx.FONTENCODING_ISO8859_1)
                 setattr(cfgGl, fname, fi.font.GetNativeFontInfo().ToString())
 
-            fx, fy = util.getTextExtent(fi.font, "O")
+            # on Mac, the width of a fixed width font can be non-integer.
+            # (points != pixels) In order to find out an appropriate
+            # approximation, we get the length of a long string and divide it
+            # by the number of characters.
+            fx, fy = util.getTextExtent(fi.font, "".ljust(100, "O"))
+            fx = float(fx) / 100.0
 
             fi.fx = max(1, fx)
             fi.fy = max(1, fy)

@@ -44,7 +44,7 @@ def createStockButton(parent, label):
     # wxMSW does not really have them: it does not have any icons and it
     # inconsistently adds the shortcut key to some buttons, but not to
     # all, so it's better not to use them at all on Windows.
-    if misc.isUnix:
+    if misc.isUnix or misc.isMac:
         ids = {
             "OK" : wx.ID_OK,
             "Cancel" : wx.ID_CANCEL,
